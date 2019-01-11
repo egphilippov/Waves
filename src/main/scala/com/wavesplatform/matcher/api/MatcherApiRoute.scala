@@ -443,6 +443,7 @@ case class MatcherApiRoute(assetPairBuilder: AssetPairBuilder,
   def reservedBalance: Route = (path("balance" / "reserved" / PublicKeyPM) & get) { publicKey =>
     signedGet(publicKey) {
       complete {
+        // <----
         askAddressActor[Map[Option[AssetId], Long]](publicKey, AddressActor.GetReservedBalance)
           .map(stringifyAssetIds)
       }

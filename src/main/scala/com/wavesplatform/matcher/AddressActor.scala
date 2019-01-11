@@ -38,15 +38,17 @@ class AddressActor(
 
   private def reserve(limitOrder: LimitOrder): Unit =
     for ((id, b) <- limitOrder.requiredBalance if b != 0) {
-      val newBalance = openVolume(id) + b
-      log.trace(s"[$owner]${limitOrder.order.id()}: $id -> +$b ($newBalance)")
+      val prevBalance = openVolume(id)
+      val newBalance  = prevBalance + b
+      log.trace(s"[$owner]${limitOrder.order.id()}: $id -> +$b ($prevBalance -> $newBalance of $id)")
       openVolume += id -> newBalance
     }
 
   private def release(orderId: ByteStr): Unit =
     for (limitOrder <- activeOrders.get(orderId); (id, b) <- limitOrder.requiredBalance if b != 0) {
-      val newBalance = openVolume(id) - b
-      log.trace(s"[$owner]${limitOrder.order.id()}: $id -> -$b ($newBalance)")
+      val prevBalance = openVolume(id)
+      val newBalance  = prevBalance - b
+      log.trace(s"[$owner]${limitOrder.order.id()}: $id -> -$b ($prevBalance -> $newBalance of $id)")
       openVolume += id -> newBalance
     }
 
