@@ -3,14 +3,16 @@ package com.wavesplatform.transaction.smart.script
 import com.wavesplatform.crypto
 import com.wavesplatform.lang.ScriptVersion
 import com.wavesplatform.lang.v1.Serde
+import com.wavesplatform.metrics.Instrumented
 import com.wavesplatform.transaction.ValidationError.ScriptParseError
 import com.wavesplatform.transaction.smart.script.v1.ScriptV1
+import com.wavesplatform.utils.ScorexLogging
 
-object ScriptReader {
+object ScriptReader extends ScorexLogging with Instrumented {
 
   val checksumLength = 4
 
-  def fromBytes(bytes: Array[Byte]): Either[ScriptParseError, Script] = {
+  def fromBytes(bytes: Array[Byte]): Either[ScriptParseError, Script] = measureLog("Script byte parsing") {
     val checkSum         = bytes.takeRight(checksumLength)
     val computedCheckSum = crypto.secureHash(bytes.dropRight(checksumLength)).take(checksumLength)
     val version          = bytes.head

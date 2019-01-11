@@ -431,9 +431,9 @@ class BlockchainUpdaterImpl(blockchain: Blockchain, settings: WavesSettings, tim
       if (blockchain.height > 0 && from < this.height) bs +: blockchain.balanceSnapshots(address, from, to) else Seq(bs)
     }
 
-  override def accountScript(address: Address): Option[Script] = ngState.fold(blockchain.accountScript(address)) { ng =>
-    ng.bestLiquidDiff.scripts.get(address) match {
-      case None      => blockchain.accountScript(address)
+  override def accountScript(address: Address): Option[Script] = ngState.fold(measureLog("Script blockchain lookup (no NG)")(blockchain.accountScript(address))) { ng =>
+    measureLog("Script NG lookup")(ng.bestLiquidDiff.scripts.get(address)) match {
+      case None      => measureLog("Script blockchain lookup (NG)")(blockchain.accountScript(address))
       case Some(scr) => scr
     }
   }

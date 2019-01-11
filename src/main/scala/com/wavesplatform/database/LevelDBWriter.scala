@@ -6,6 +6,7 @@ import com.wavesplatform.account.{Address, Alias}
 import com.wavesplatform.block.{Block, BlockHeader}
 import com.wavesplatform.database.patch.DisableHijackedAliases
 import com.wavesplatform.features.BlockchainFeatures
+import com.wavesplatform.metrics.Instrumented
 import com.wavesplatform.settings.FunctionalitySettings
 import com.wavesplatform.state._
 import com.wavesplatform.state.reader.LeaseDetails
@@ -64,7 +65,8 @@ object LevelDBWriter {
 
 class LevelDBWriter(writableDB: DB, fs: FunctionalitySettings, val maxCacheSize: Int, val maxRollbackDepth: Int, val rememberBlocksInterval: Long)
     extends Caches
-    with ScorexLogging {
+    with ScorexLogging
+    with Instrumented {
 
   private val balanceSnapshotMaxRollbackDepth: Int = maxRollbackDepth + 1000
 
@@ -86,9 +88,11 @@ class LevelDBWriter(writableDB: DB, fs: FunctionalitySettings, val maxCacheSize:
 
   override protected def loadLastBlock(): Option[Block] = readOnly(db => db.get(Keys.blockAt(db.get(Keys.height))))
 
-  override protected def loadScript(address: Address): Option[Script] = readOnly { db =>
-    addressId(address).fold(Option.empty[Script]) { addressId =>
-      db.fromHistory(Keys.addressScriptHistory(addressId), Keys.addressScript(addressId)).flatten
+  override protected def loadScript(address: Address): Option[Script] = measureLog("Script DB lookup") {
+    readOnly { db =>
+      addressId(address).fold(Option.empty[Script]) { addressId =>
+        db.fromHistory(Keys.addressScriptHistory(addressId), Keys.addressScript(addressId)).flatten
+      }
     }
   }
 

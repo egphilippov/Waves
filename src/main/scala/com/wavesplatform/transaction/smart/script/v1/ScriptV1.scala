@@ -6,12 +6,13 @@ import com.wavesplatform.lang.ScriptVersion.Versions.V1
 import com.wavesplatform.lang.v1.compiler.Terms._
 import com.wavesplatform.lang.v1.evaluator.FunctionIds._
 import com.wavesplatform.lang.v1.{FunctionHeader, ScriptEstimator, Serde}
+import com.wavesplatform.metrics.Instrumented
 import com.wavesplatform.state.ByteStr
 import com.wavesplatform.transaction.smart.script.Script
-import com.wavesplatform.utils.{functionCosts, varNames}
+import com.wavesplatform.utils.{ScorexLogging, functionCosts, varNames}
 import monix.eval.Coeval
 
-object ScriptV1 {
+object ScriptV1 extends Instrumented with ScorexLogging {
   private val checksumLength = 4
   private val maxComplexity  = 20 * functionCosts(V1)(FunctionHeader.Native(SIGVERIFY))()
   private val maxSizeInBytes = 8 * 1024
@@ -23,7 +24,7 @@ object ScriptV1 {
 
   def apply(version: ScriptVersion, x: EXPR, checkSize: Boolean = true): Either[String, Script] =
     for {
-      scriptComplexity <- ScriptEstimator(varNames(version), functionCosts(version), x)
+      scriptComplexity <- measureLog("Script estimate")(ScriptEstimator(varNames(version), functionCosts(version), x))
       _                <- Either.cond(scriptComplexity <= maxComplexity, (), s"Script is too complex: $scriptComplexity > $maxComplexity")
       s = new ScriptV1(version, x, scriptComplexity)
       _ <- if (checkSize) validateBytes(s.bytes().arr) else Right(())
